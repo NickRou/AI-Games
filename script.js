@@ -12,19 +12,29 @@ const winCombos = [
     [2,4,6]
 ]
 let circleTurn
+let invalidMove = false
 const cellElements = document.querySelectorAll('[data-cell]')
 const board = document.getElementById('board')
 const winMessageElement = document.getElementById('playerWinsMessage')
 const winMessageTxtElement = document.querySelector('[data-player-wins-text]')
 const newGameButton = document.getElementById('newGameButton')
 
+/*
+Human player will use 'x'
+Minimax (computer) will use 'circle'
+
+
+*/
+
 startGame()
 
 newGameButton.addEventListener('click', startGame)
 
+document.addEventListener('click', nextBestMove)
+
 function startGame() {
     //x player starts first
-    circleTurn = false
+    circleTurn = true
 
     //check for where player wants to place mark
     //can only do so once
@@ -41,6 +51,8 @@ function startGame() {
 }
 
 
+
+
 function mouseClick(e) {
     /*
     1. place player mark
@@ -50,20 +62,32 @@ function mouseClick(e) {
     */
    const cell = e.target
    const currClass = circleTurn ? CIRCLE_CLASS : X_CLASS
-   markCell(cell, currClass)
+   if (!circleTurn) {
+        markCell(cell, currClass)
+   } 
+   console.log(cellElements)
+   
    if (checkWin(currClass)) {
         endGame(false)
    } else if (isDraw()) {
         endGame(true)
    } else {
-        switchPlayers()
+       if (!invalidMove) {
+            switchPlayers()
+       }  
    }   
 }
 
 
 function markCell(cell, currClass) {
     //mark current cell with the current class mark (x or circle)
-    cell.classList.add(currClass)
+    if (!cell.classList.contains(X_CLASS) && !cell.classList.contains(CIRCLE_CLASS)) {
+        cell.classList.add(currClass)
+        invalidMove = false;
+    } else {
+        invalidMove = true;
+    }
+    
 }
 
 
@@ -96,4 +120,76 @@ function isDraw() {
     return [...cellElements].every(cell => {
         return cell.classList.contains(X_CLASS) || cell.classList.contains(CIRCLE_CLASS)
     })
+}
+
+
+//minimax algorithm functions
+function nextBestMove() {
+    if (circleTurn) {
+        let bestScore = -Infinity
+        let bestMove
+        for (let i=0; i<9; i++) {
+            if (!cellElements[i].classList.contains(X_CLASS) && !cellElements[i].classList.contains(CIRCLE_CLASS)) {   
+                cellElements[i].classList.add(CIRCLE_CLASS)
+                let score = minimax(0, false)
+                console.log("score: " + score)
+                cellElements[i].classList.remove(CIRCLE_CLASS)
+                if (score > bestScore) {
+                    bestScore = score
+                    bestMove = i
+                }
+            }
+        }
+        cellElements[bestMove].classList.add(CIRCLE_CLASS)
+        if (checkWin(CIRCLE_CLASS)) {
+            endGame(false)
+        } else if (isDraw()) {
+            endGame(true)
+        }
+        switchPlayers()
+    } else {
+        console.log("not AI turn")
+    }
+    
+    
+}
+
+function minimax(depth, isMaximizing) {
+    let xWon = checkWin(X_CLASS)
+    let circleWon = checkWin(CIRCLE_CLASS)
+    let draw = isDraw()
+    if (xWon || circleWon) {
+        if (xWon) {
+            return -10
+        } else {
+            return 10
+        }
+    } else if (draw) {
+        return 0
+    }
+
+    if (isMaximizing) {
+        let bestScore = -Infinity
+        for (let i=0; i<9; i++) {
+            if (!cellElements[i].classList.contains(X_CLASS) && !cellElements[i].classList.contains(CIRCLE_CLASS)) {
+                cellElements[i].classList.add(CIRCLE_CLASS)
+                let score = minimax(depth + 1, false);
+                cellElements[i].classList.remove(CIRCLE_CLASS)
+                bestScore = Math.max(bestScore, score);
+            }
+        }
+        return bestScore
+    } else {
+        let bestScore = Infinity
+        for (let i=0; i<9; i++) {
+            if (!cellElements[i].classList.contains(X_CLASS) && !cellElements[i].classList.contains(CIRCLE_CLASS)) {
+                cellElements[i].classList.add(X_CLASS)
+                let score = minimax(depth + 1, true);
+                cellElements[i].classList.remove(X_CLASS)
+                bestScore = Math.min(bestScore, score);
+            }
+        }
+        return bestScore
+    }
+
 }
